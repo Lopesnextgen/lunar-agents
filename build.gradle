@@ -1,0 +1,16 @@
+subprojects {
+    group 'me.onils'
+
+    repositories {
+        mavenCentral()
+    }
+
+    pluginManager.withPlugin('java') {
+        dependencies {
+            compileOnly 'org.projectlombok:lombok:1.18.24'
+            annotationProcessor 'org.projectlombok:lombok:1.18.24'
+        }
+
+        sourceCompatibility = targetCompatibility = 16
+    }
+}

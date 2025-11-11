@@ -1,0 +1,31 @@
+plugins {
+    id 'base'
+    id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    dependencies {
+        implementation project(':commons')
+    }
+
+    jar {
+        manifest.attributes(
+                'Can-Retransform-Classes': true,
+                'Premain-Class': agentClass,
+                'Agent-Class': agentClass
+        )
+    }
+
+    build {
+        dependsOn = [shadowJar]
+    }
+
+    shadowJar {
+        archiveClassifier.set('')
+
+        destinationDirectory.set(this.buildDir)
+    }
+}
