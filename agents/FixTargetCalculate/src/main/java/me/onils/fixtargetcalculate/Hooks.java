@@ -11,6 +11,7 @@ public final class Hooks {
     private static Object lockedEntity; // net.minecraft.entity.Entity
 
     public static void afterGetMouseOver(Object entityRenderer, float partialTicks) {
+        if (entityRenderer == null) return;
         try {
             Class<?> mcClass = findClass("net.minecraft.client.Minecraft");
             if (mcClass == null) return;
@@ -139,13 +140,6 @@ public final class Hooks {
         try {
             Class<?> mopClass = findClass("net.minecraft.util.MovingObjectPosition");
             if (mopClass == null) return null;
-
-            // Try direct constructor MovingObjectPosition(Entity)
-            try {
-                Constructor<?> c1 = mopClass.getDeclaredConstructor(findClass("net.minecraft.entity.Entity"));
-                c1.setAccessible(true);
-                return c1.newInstance(entity);
-            } catch (Throwable ignored) {}
 
             // Try constructor MovingObjectPosition(Entity, Vec3)
             try {
