@@ -97,7 +97,19 @@ Abaixo um resumo do que cada agente faz e como configurá-lo (quando aplicável)
 
 - FixTargetCalculate
   - Ajusta o cálculo de mira/seleção de alvo (hook em EntityRenderer#getMouseOver) para melhorar a coerência do objeto “objectMouseOver”.
-  - Sem opções.
+  - Opção: debug (habilita logs de verificação). Ex.: =debug
+  - Como verificar se está funcionando:
+    - Inicie o cliente com: -javaagent:"C:\\agentes\\FixTargetCalculate.jar"=debug
+    - No console/terminal você deverá ver (entre outras) linhas como:
+      - [FixTargetCalculate] Agent loaded (debug=ON)
+      - [FixTargetCalculate] Patched EntityRenderer#getMouseOver (name: getMouseOver | func_78473_a)
+      - [FixTargetCalculate] Hook active
+      - Durante o jogo, ao mirar em jogadores, logs eventuais (limitados a 1/s) como:
+        - [FixTargetCalculate] Lock -> <nome>(id=123)
+        - [FixTargetCalculate] Keep lock -> <nome>(id=123)
+        - [FixTargetCalculate] Override objectMouseOver -> <nome>(id=123)
+        - [FixTargetCalculate] No target -> release lock
+    - Onde ver os logs: execute o launcher pelo terminal (cmd/PowerShell) para que o output da JVM fique visível.
 
 - HitDelayFix
   - Remove o cooldown aleatório de ataque em 1.8, fazendo a espada “não travar” aleatoriamente.
