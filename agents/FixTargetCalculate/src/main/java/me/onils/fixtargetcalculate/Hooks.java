@@ -10,9 +10,17 @@ public final class Hooks {
 
     private static Object lockedEntity; // net.minecraft.entity.Entity
 
+    public static volatile boolean DEBUG = false;
+    private static boolean printedHookActive = false;
+    private static long lastLogMs = 0L;
+
     public static void afterGetMouseOver(Object entityRenderer, float partialTicks) {
         if (entityRenderer == null) return;
         try {
+            if (DEBUG && !printedHookActive) {
+                printedHookActive = true;
+                System.out.println("[FixTargetCalculate] Hook active");
+            }
             Class<?> mcClass = findClass("net.minecraft.client.Minecraft");
             if (mcClass == null) return;
 
@@ -35,23 +43,27 @@ public final class Hooks {
             // If no entity is currently targeted, release the lock
             if (currentEntity == null) {
                 lockedEntity = null;
+                debugLog("No target -> release lock");
                 return;
             }
 
             // Only handle players; otherwise clear lock and return
             if (!isPlayer(currentEntity)) {
                 lockedEntity = null;
+                debugLog("Non-player target -> ignored");
                 return;
             }
 
             if (lockedEntity == null || !isPlayer(lockedEntity)) {
                 lockedEntity = currentEntity;
+                debugLog("Lock -> " + entityLabel(currentEntity));
                 return;
             }
 
             // If it's the same entity, refresh the lock
             if (isSameEntity(lockedEntity, currentEntity)) {
                 lockedEntity = currentEntity;
+                debugLog("Keep lock -> " + entityLabel(currentEntity));
                 return;
             }
 
@@ -61,6 +73,7 @@ public final class Hooks {
                 Object mopFromLocked = newMopFromEntity(lockedEntity);
                 if (mopFromLocked != null) {
                     fObjectMouseOver.set(mc, mopFromLocked);
+                    debugLog("Override objectMouseOver -> " + entityLabel(lockedEntity));
                     // keep the older lock (do not switch)
                     return;
                 }
@@ -208,5 +221,37 @@ public final class Hooks {
             } catch (Throwable ignored) {}
         }
         return null;
+    }
+
+    private static void debugLog(String msg) {
+        if (!DEBUG) return;
+        long now = System.currentTimeMillis();
+        if (now - lastLogMs < 1000L) return; // throttle to 1 msg/sec
+        lastLogMs = now;
+        try {
+            System.out.println("[FixTargetCalculate] " + msg);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static String entityLabel(Object entity) {
+        if (entity == null) return "null";
+        String name = null;
+        try {
+            Method getName = findMethod(entity.getClass(), new String[]{"getName", "getCommandSenderName", "func_70005_c_"});
+            if (getName != null) {
+                Object n = getName.invoke(entity);
+                if (n != null) name = String.valueOf(n);
+            }
+        } catch (Throwable ignored) {}
+        int id = -1;
+        try {
+            Method getId = findMethod(entity.getClass(), new String[]{"getEntityId", "func_145782_y"});
+            if (getId != null) id = ((Number) getId.invoke(entity)).intValue();
+        } catch (Throwable ignored) {}
+        if (name == null || name.isEmpty()) {
+            name = entity.getClass().getSimpleName();
+        }
+        return name + "(id=" + id + ")";
     }
 }

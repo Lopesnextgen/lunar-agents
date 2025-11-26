@@ -12,6 +12,8 @@ import java.security.ProtectionDomain;
 
 public class Transformer implements ClassFileTransformer {
 
+    private static volatile boolean loggedPatched = false;
+
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         if (!Utils.isMinecraft(className)) {
@@ -28,6 +30,7 @@ public class Transformer implements ClassFileTransformer {
         cr.accept(cn, 0);
 
         boolean modified = false;
+        String patchedMethodName = null;
 
         for (MethodNode mn : cn.methods) {
             if (!"(F)V".equals(mn.desc)) continue;
@@ -51,12 +54,17 @@ public class Transformer implements ClassFileTransformer {
             }
 
             modified = true;
+            patchedMethodName = mn.name;
             break;
         }
 
         if (modified) {
             ClassWriter cw = new ClassWriter(cr, 0);
             cn.accept(cw);
+            if (!loggedPatched) {
+                loggedPatched = true;
+                System.out.println("[FixTargetCalculate] Patched EntityRenderer#getMouseOver (name: " + patchedMethodName + ")");
+            }
             return cw.toByteArray();
         }
 
