@@ -8,7 +8,6 @@ public class Agent {
         boolean debug = args != null && args.toLowerCase(Locale.ROOT).contains("debug");
         Hooks.DEBUG = debug;
         System.out.println("[FixTargetCalculate] Agent loaded" + (debug ? " (debug=ON)" : ""));
-        inst.addTransformer(new Transformer());
         inst.addTransformer(new WorldTransformer());
     }
 }
