@@ -37,6 +37,8 @@ public final class WorldTransformer implements ClassFileTransformer {
                         " ctors=" + cv.ctorsPatched +
                         " getLoaded=" + cv.getLoadedPatched +
                         " getAABB=" + cv.getAabbPatched +
+                        " getAABBExcl=" + cv.getAabbExclPatched +
+                        " fieldReadsRewritten=" + cv.loadedFieldRewrites +
                         " update=" + cv.updatePatched);
             }
             return cw.toByteArray();
@@ -50,7 +52,9 @@ public final class WorldTransformer implements ClassFileTransformer {
         boolean ctorsPatched;
         boolean getLoadedPatched;
         boolean getAabbPatched;
+        boolean getAabbExclPatched;
         boolean updatePatched;
+        int loadedFieldRewrites;
 
         String owner;
         boolean hasGetLoadedMethod;
@@ -65,31 +69,10 @@ public final class WorldTransformer implements ClassFileTransformer {
 
         @Override
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-            if ("<init>".equals(name)) {
-                MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
-                return new MethodVisitor(api, mv) {
-                    @Override
-                    public void visitInsn(int opcode) {
-                        if (opcode == Opcodes.RETURN) {
-                            super.visitVarInsn(Opcodes.ALOAD, 0);
-                            super.visitTypeInsn(Opcodes.NEW, "java/util/ArrayList");
-                            super.visitInsn(Opcodes.DUP);
-                            super.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/ArrayList", "<init>", "()V", false);
-                            super.visitFieldInsn(Opcodes.PUTFIELD, owner, "agent_cachedEntityList", "Ljava/util/List;");
-                            super.visitVarInsn(Opcodes.ALOAD, 0);
-                            super.visitInsn(Opcodes.LCONST_0);
-                            super.visitFieldInsn(Opcodes.PUTFIELD, owner, "agent_lastEntityListUpdate", "J");
-                            ctorsPatched = true; modified = true;
-                        }
-                        super.visitInsn(opcode);
-                    }
-                };
-            }
+            MethodVisitor base = super.visitMethod(access, name, desc, signature, exceptions);
 
-            if ("(Ljava/lang/Class;Lnet/minecraft/util/AxisAlignedBB;)Ljava/util/List;".equals(desc)
-                    && ("getEntitiesWithinAABB".equals(name) || "func_175674_a".equals(name))) {
-                MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
-                return new MethodVisitor(api, mv) {
+            if ("(Ljava/lang/Class;Lnet/minecraft/util/AxisAlignedBB;)Ljava/util/List;".equals(desc)) {
+                return new MethodVisitor(api, base) {
                     private boolean emitted;
                     @Override public void visitCode() {
                         if (emitted) return; emitted = true; super.visitCode();
@@ -101,13 +84,50 @@ public final class WorldTransformer implements ClassFileTransformer {
                         super.visitInsn(Opcodes.ARETURN);
                         getAabbPatched = true; modified = true;
                     }
+                    @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
+                        if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
+                                && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
+                            super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
+                                    "(Ljava/lang/Object;)Ljava/util/List;", false);
+                            loadedFieldRewrites++; modified = true;
+                        } else {
+                            super.visitFieldInsn(opcode, ownerF, nameF, descF);
+                        }
+                    }
+                    @Override public void visitMaxs(int maxStack, int maxLocals) { super.visitMaxs(0, 0); }
+                };
+            }
+
+            if ("(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/AxisAlignedBB;Lcom/google/common/base/Predicate;)Ljava/util/List;".equals(desc)) {
+                return new MethodVisitor(api, base) {
+                    private boolean emitted;
+                    @Override public void visitCode() {
+                        if (emitted) return; emitted = true; super.visitCode();
+                        super.visitVarInsn(Opcodes.ALOAD, 0);
+                        super.visitVarInsn(Opcodes.ALOAD, 1);
+                        super.visitVarInsn(Opcodes.ALOAD, 2);
+                        super.visitVarInsn(Opcodes.ALOAD, 3);
+                        super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getEntitiesInAABBExcludingHook",
+                                "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;", false);
+                        super.visitInsn(Opcodes.ARETURN);
+                        getAabbExclPatched = true; modified = true;
+                    }
+                    @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
+                        if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
+                                && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
+                            super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
+                                    "(Ljava/lang/Object;)Ljava/util/List;", false);
+                            loadedFieldRewrites++; modified = true;
+                        } else {
+                            super.visitFieldInsn(opcode, ownerF, nameF, descF);
+                        }
+                    }
                     @Override public void visitMaxs(int maxStack, int maxLocals) { super.visitMaxs(0, 0); }
                 };
             }
 
             if ("()V".equals(desc) && ("updateEntities".equals(name) || "func_72939_s".equals(name))) {
-                MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
-                return new MethodVisitor(api, mv) {
+                return new MethodVisitor(api, base) {
                     @Override public void visitInsn(int opcode) {
                         if (opcode == Opcodes.RETURN) {
                             super.visitVarInsn(Opcodes.ALOAD, 0);
@@ -116,13 +136,22 @@ public final class WorldTransformer implements ClassFileTransformer {
                         }
                         super.visitInsn(opcode);
                     }
+                    @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
+                        if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
+                                && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
+                            super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
+                                    "(Ljava/lang/Object;)Ljava/util/List;", false);
+                            loadedFieldRewrites++; modified = true;
+                        } else {
+                            super.visitFieldInsn(opcode, ownerF, nameF, descF);
+                        }
+                    }
                 };
             }
 
             if ("()Ljava/util/List;".equals(desc) && "getLoadedEntityList".equals(name)) {
                 hasGetLoadedMethod = true;
-                MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
-                return new MethodVisitor(api, mv) {
+                return new MethodVisitor(api, base) {
                     private boolean emitted;
                     @Override public void visitCode() {
                         if (emitted) return; emitted = true; super.visitCode();
@@ -132,11 +161,43 @@ public final class WorldTransformer implements ClassFileTransformer {
                         super.visitInsn(Opcodes.ARETURN);
                         getLoadedPatched = true; modified = true;
                     }
+                    @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
+                        if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
+                                && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
+                            super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
+                                    "(Ljava/lang/Object;)Ljava/util/List;", false);
+                            loadedFieldRewrites++; modified = true;
+                        } else {
+                            super.visitFieldInsn(opcode, ownerF, nameF, descF);
+                        }
+                    }
                     @Override public void visitMaxs(int maxStack, int maxLocals) { super.visitMaxs(0, 0); }
                 };
             }
 
-            return super.visitMethod(access, name, desc, signature, exceptions);
+            return new MethodVisitor(api, base) {
+                @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
+                    if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
+                            && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
+                        super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
+                                "(Ljava/lang/Object;)Ljava/util/List;", false);
+                        loadedFieldRewrites++; modified = true;
+                    } else {
+                        super.visitFieldInsn(opcode, ownerF, nameF, descF);
+                    }
+                }
+            };
+        }
+
+        private void rewriteLoadedListRead(MethodVisitor mv, int opcode, String ownerF, String nameF, String descF) {
+            if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
+                    && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
+                        "(Ljava/lang/Object;)Ljava/util/List;", false);
+                loadedFieldRewrites++; modified = true;
+                return;
+            }
+            mv.visitFieldInsn(opcode, ownerF, nameF, descF);
         }
 
         @Override

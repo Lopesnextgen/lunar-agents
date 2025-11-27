@@ -151,6 +151,12 @@ public final class Hooks {
             if (mopClass == null) return null;
 
             try {
+                Constructor<?> c1 = mopClass.getDeclaredConstructor(findClass("net.minecraft.entity.Entity"));
+                c1.setAccessible(true);
+                return c1.newInstance(entity);
+            } catch (Throwable ignored) {}
+
+            try {
                 Class<?> vec3Class = findClass("net.minecraft.util.Vec3");
                 if (vec3Class != null) {
                     Constructor<?> c2 = mopClass.getDeclaredConstructor(findClass("net.minecraft.entity.Entity"), vec3Class);
@@ -324,6 +330,53 @@ public final class Hooks {
             List<?> vanilla = readLoadedEntityList(world);
             return vanilla != null ? new ArrayList<>(vanilla) : Collections.emptyList();
         }
+    }
+
+    public static List<?> getEntitiesInAABBExcludingHook(Object world, Object exclude, Object aabb, Object predicate) {
+        try {
+            List<?> list = getLoadedEntityListHook(world);
+            if (list.isEmpty()) return Collections.emptyList();
+
+            Method getBox = null;
+            Method intersects = null;
+            Class<?> aabbClass = aabb != null ? aabb.getClass() : findClass("net.minecraft.util.AxisAlignedBB");
+            if (aabbClass != null) intersects = findMethod(aabbClass, AABB_INTERSECTS, aabbClass);
+
+            List<Object> out = new ArrayList<>();
+            for (Object e : list) {
+                if (e == null) continue;
+                if (e == exclude) continue;
+                if (getBox == null || getBox.getDeclaringClass() != e.getClass()) {
+                    getBox = findMethod(e.getClass(), ENTITY_GET_BOX);
+                }
+                if (getBox == null) continue;
+                Object eb = getBox.invoke(e);
+                if (eb == null || aabb == null || intersects == null) continue;
+                Boolean ok = (Boolean) intersects.invoke(aabb, eb);
+                if (ok == null || !ok) continue;
+                if (predicate != null && !applyPredicate(predicate, e)) continue;
+                out.add(e);
+            }
+            debugLog("[World] AABB excluding filtered size=" + out.size());
+            return out;
+        } catch (Throwable t) {
+            List<?> vanilla = readLoadedEntityList(world);
+            return vanilla != null ? new ArrayList<>(vanilla) : Collections.emptyList();
+        }
+    }
+
+    private static boolean applyPredicate(Object predicate, Object e) {
+        try {
+            if (predicate == null) return true;
+            for (Method m : predicate.getClass().getMethods()) {
+                if (!"apply".equals(m.getName())) continue;
+                if (m.getParameterTypes().length != 1) continue;
+                m.setAccessible(true);
+                Object r = m.invoke(predicate, e);
+                if (r instanceof Boolean) return (Boolean) r;
+            }
+        } catch (Throwable ignored) {}
+        return true;
     }
 
     public static void onWorldUpdate(Object world) {
