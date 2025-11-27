@@ -149,6 +149,19 @@ Abaixo um resumo do que cada agente faz e como configurá-lo (quando aplicável)
   - Faz o Auto GG funcionar em modos de times.
   - Sem opções.
 
+- World188Compat
+  - Emula o comportamento da classe World da 1.8.8 no Minecraft 1.8.9 (caching de entidades, getEntitiesWithinAABB sem reconstruções e controle via updateEntities).
+  - Opção: debug (habilita logs detalhados). Ex.: =debug
+  - Como verificar:
+    - Inicie o cliente com: -javaagent:"C:\\agentes\\World188Compat.jar"=debug
+    - Logs esperados no início:
+      - [World188Compat] Agent loaded (debug=ON)
+      - [World188Compat] Patched net.minecraft.world.World fields=... initCtors=... getLoadedEntityList=... getEntitiesWithinAABB=... updateEntities=...
+    - Logs em runtime (limitados a ~1/s):
+      - [World188Compat] [getLoadedEntityListHook] refreshed cache (size=NN)
+      - [World188Compat] [getEntitiesAABBHook] filtered result size=NN
+      - [World188Compat] [onWorldUpdate] invalidated cache (will refresh on next query)
+
 Compatibilidade e limitações
 - Foco em Minecraft 1.8.9. Pode não funcionar (ou funcionar parcialmente) em outras versões.
 - Mudanças no cliente/launcher podem quebrar os hooks a qualquer momento. Se um agente “parar de funcionar”, atualizações de nomes/assinaturas podem ser necessárias.
