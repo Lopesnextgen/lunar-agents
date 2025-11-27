@@ -20,7 +20,6 @@ public class Transformer implements ClassFileTransformer {
             return classfileBuffer;
         }
 
-        // Target EntityRenderer#getMouseOver(float)
         if (!"net/minecraft/client/renderer/EntityRenderer".equals(className)) {
             return classfileBuffer;
         }
@@ -36,12 +35,11 @@ public class Transformer implements ClassFileTransformer {
             if (!"(F)V".equals(mn.desc)) continue;
             if (!"getMouseOver".equals(mn.name) && !"func_78473_a".equals(mn.name)) continue;
 
-            // Inject our hook right before each return so it can override the computed objectMouseOver if needed
             for (AbstractInsnNode insn = mn.instructions.getFirst(); insn != null; insn = insn.getNext()) {
                 if (insn.getOpcode() == Opcodes.RETURN) {
                     InsnList call = new InsnList();
-                    call.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this (EntityRenderer)
-                    call.add(new VarInsnNode(Opcodes.FLOAD, 1)); // partialTicks
+                    call.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                    call.add(new VarInsnNode(Opcodes.FLOAD, 1));
                     call.add(new MethodInsnNode(
                             Opcodes.INVOKESTATIC,
                             "me/onils/fixtargetcalculate/Hooks",
