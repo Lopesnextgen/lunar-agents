@@ -1,4 +1,4 @@
-package me.onils.damageindicator;
+package davi.lopes.damageindicator;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -10,7 +10,6 @@ public final class Hooks {
 
     public static void onRenderGameOverlay(Object guiIngame, float partialTicks) {
         try {
-            // Minecraft instance
             Class<?> mcClass = findClass(
                     "net.minecraft.client.Minecraft"
             );
@@ -21,16 +20,14 @@ public final class Hooks {
             Object mc = getMc.invoke(null);
             if (mc == null) return;
 
-            // objectMouseOver
             Field fObjectMouseOver = findField(mcClass, new String[]{"objectMouseOver", "field_71476_x"});
             if (fObjectMouseOver == null) return;
             Object movingObj = fObjectMouseOver.get(mc);
             if (movingObj == null) return;
 
-            // entityHit
             Class<?> mopClass = findClass(
                     "net.minecraft.util.MovingObjectPosition",
-                    "net.minecraft.util.MovingObjectPosition$MovingObjectType" // helps class loader in some versions
+                    "net.minecraft.util.MovingObjectPosition$MovingObjectType"
             );
             if (mopClass == null) return;
 
@@ -39,11 +36,9 @@ public final class Hooks {
             Object entity = fEntityHit.get(movingObj);
             if (entity == null) return;
 
-            // Ensure it's a player
-            Class<?> entityPlayerClass = findClass("net.minecraft.entity.player.EntityPlayer");
-            if (entityPlayerClass == null || !entityPlayerClass.isInstance(entity)) return;
+            Class<?> entityLivingBaseClass = findClass("net.minecraft.entity.EntityLivingBase");
+            if (entityLivingBaseClass == null || !entityLivingBaseClass.isInstance(entity)) return;
 
-            // Extract name and health
             String name = null;
             try {
                 Method getName = findMethod(entity.getClass(), new String[]{"getName", "func_70005_c_"});
@@ -52,22 +47,29 @@ public final class Hooks {
             if (name == null) name = "Player";
 
             float health = -1f;
+            float maxHealth = -1f;
             try {
-                // EntityPlayer extends EntityLivingBase
                 Method getHealth = findMethod(entity.getClass(), new String[]{"getHealth", "func_110143_aJ"});
-                if (getHealth == null) {
-                    // search in superclass if needed
+                Method getMaxHealth = findMethod(entity.getClass(), new String[]{"getMaxHealth", "func_110138_aP"});
+                if (getHealth == null || getMaxHealth == null) {
                     Class<?> sup = entity.getClass().getSuperclass();
-                    if (sup != null) getHealth = findMethod(sup, new String[]{"getHealth", "func_110143_aJ"});
+                    if (sup != null) {
+                        if (getHealth == null) getHealth = findMethod(sup, new String[]{"getHealth", "func_110143_aJ"});
+                        if (getMaxHealth == null) getMaxHealth = findMethod(sup, new String[]{"getMaxHealth", "func_110138_aP"});
+                    }
                 }
                 if (getHealth != null) {
                     Object h = getHealth.invoke(entity);
                     if (h instanceof Float) health = (Float) h;
                     else if (h instanceof Number) health = ((Number) h).floatValue();
                 }
+                if (getMaxHealth != null) {
+                    Object mh = getMaxHealth.invoke(entity);
+                    if (mh instanceof Float) maxHealth = (Float) mh;
+                    else if (mh instanceof Number) maxHealth = ((Number) mh).floatValue();
+                }
             } catch (Throwable ignored) {}
 
-            // Prepare renderer and scaled resolution
             Object fontRenderer = null;
             try {
                 Field frField = findField(mcClass, new String[]{"fontRendererObj", "field_71466_p"});
@@ -90,13 +92,21 @@ public final class Hooks {
             } catch (Throwable ignored) {}
             if (width <= 0 || height <= 0) return;
 
-            String line1 = name;
-            String line2 = (health >= 0 ? String.format("HP: %.1f", health) : "HP: ?");
+            int curHpInt = health >= 0 ? (int) health : -1;
+            int maxHpInt = maxHealth >= 0 ? (int) maxHealth : -1;
+            String line1 = '[' + name + ']';
+            String line2;
+            if (curHpInt >= 0 && maxHpInt >= 0) {
+                line2 = curHpInt + " §4\u2665§r/" + maxHpInt + " §4\u2665";
+            } else if (curHpInt >= 0) {
+                line2 = curHpInt + " §4\u2665";
+            } else {
+                line2 = "? §4\u2665";
+            }
 
             int x = width / 2;
-            int y = height / 2 - 25; // above crosshair
+            int y = height / 2 - 25;
 
-            // Try GuiIngame.drawCenteredString first
             boolean drawn = false;
             try {
                 Method drawCentered = findMethod(guiIngame.getClass(), new String[]{"drawCenteredString", "func_73732_a"},
@@ -108,7 +118,6 @@ public final class Hooks {
                 }
             } catch (Throwable ignored) {}
 
-            // Fallback to FontRenderer.drawStringWithShadow
             if (!drawn) {
                 try {
                     Method drawShadow = findMethod(fontRenderer.getClass(), new String[]{"drawStringWithShadow", "func_175063_a"}, String.class, float.class, float.class, int.class);
@@ -119,7 +128,6 @@ public final class Hooks {
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {
-            // Swallow any exception to avoid crashing the client HUD
         }
     }
 
@@ -148,7 +156,6 @@ public final class Hooks {
                 return f;
             } catch (Throwable ignored) {}
         }
-        // try public fields too
         for (String name : names) {
             try {
                 Field f = owner.getField(name);

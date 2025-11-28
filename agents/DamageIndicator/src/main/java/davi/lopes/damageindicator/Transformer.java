@@ -1,6 +1,6 @@
-package me.onils.damageindicator;
+package davi.lopes.damageindicator;
 
-import me.onils.agent.commons.Utils;
+import davi.lopes.agent.commons.Utils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -18,7 +18,6 @@ public class Transformer implements ClassFileTransformer {
             return classfileBuffer;
         }
 
-        // Target the in-game HUD class
         if (!"net/minecraft/client/gui/GuiIngame".equals(className)) {
             return classfileBuffer;
         }
@@ -30,19 +29,17 @@ public class Transformer implements ClassFileTransformer {
         boolean modified = false;
 
         for (MethodNode mn : cn.methods) {
-            // renderGameOverlay(float) or func_175180_a(float)
             if (!"(F)V".equals(mn.desc)) continue;
             if (!"renderGameOverlay".equals(mn.name) && !"func_175180_a".equals(mn.name)) continue;
 
-            // Insert before each return to ensure execution regardless of control flow
             for (AbstractInsnNode insn = mn.instructions.getFirst(); insn != null; insn = insn.getNext()) {
                 if (insn.getOpcode() == Opcodes.RETURN) {
                     InsnList call = new InsnList();
-                    call.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this (GuiIngame)
-                    call.add(new VarInsnNode(Opcodes.FLOAD, 1)); // partialTicks
+                    call.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                    call.add(new VarInsnNode(Opcodes.FLOAD, 1));
                     call.add(new MethodInsnNode(
                             Opcodes.INVOKESTATIC,
-                            "me/onils/damageindicator/Hooks",
+                            "davi/lopes/damageindicator/Hooks",
                             "onRenderGameOverlay",
                             "(Ljava/lang/Object;F)V",
                             false
@@ -52,7 +49,7 @@ public class Transformer implements ClassFileTransformer {
             }
 
             modified = true;
-            break; // only patch once
+            break;
         }
 
         if (modified) {

@@ -1,4 +1,4 @@
-package me.onils.damageindicator;
+package davi.lopes.damageindicator;
 
 import java.lang.instrument.Instrumentation;
 
