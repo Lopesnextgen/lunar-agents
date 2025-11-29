@@ -29,7 +29,7 @@ Conjunto de agentes Java que modificam o Lunar Client/Minecraft em tempo de exec
 - Damage Indicator em modo edição (exemplo ilustrativo):
 
 <p align="center">
-  <img alt="Damage Indicator — Modo Edição" src="https://img.shields.io/badge/Damage%20Indicator-Edit%20Mode-00A2FF.svg" />
+  <img alt="Damage Indicator — Modo Edição" src="docs/assets/damageindicatorexample.png" width="720" />
 </p>
 
 > Dica: Durante o modo edição, é exibido um placeholder mesmo sem alvo, para facilitar o posicionamento.
