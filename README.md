@@ -170,6 +170,47 @@ Durante o modo edição:
 - E é exibido um crédito no canto inferior esquerdo:
   `github.com/Lopesnextgen | github.com/Adoecido`
 
+## 🎯 FixTargetCalculate (força lógica 1.8.0)
+Estabiliza a seleção de alvo e o cálculo de entidades visadas em 1.8.9 para se comportar como a 1.8.0, reduzindo "flicks" na mira e flags em anticheats (ex.: BadPacketsR/NegativeTimer).
+
+Funcionalidades:
+- Snapshot por tick de `loadedEntityList` — a lista de entidades é fotografada uma vez por tick e reutilizada ao longo do mesmo tick.
+- Invalidação do snapshot no final de `World#updateEntities` — atualização controlada a cada tick (≈50 ms), não a cada chamada.
+- Reescrita somente das leituras do campo `loadedEntityList` em pontos sensíveis — sem substituir métodos inteiros (comportamento não forçado).
+
+Como usar:
+```bash
+# Carregar o agente (Windows)
+java -javaagent:"C:\caminho\para\FixTargetCalculate.jar" -jar SeuLauncher.jar
+
+# Opcional: ativar logs de debug
+java -javaagent:"C:\caminho\para\FixTargetCalculate.jar"=debug -jar SeuLauncher.jar
+```
+
+Validação sugerida:
+- Entre em um cenário com muitos players num mesmo bloco (ex.: teia) e observe a estabilidade do alvo dentro do mesmo tick.
+- Com `=debug`, procure por logs como:
+  - `[FixTargetCalculate] Patched World: ...`
+  - `[World] snapshot refresh size=...`
+
+Observações:
+- Compatível com 1.8.9; não altera a física nem a lógica do servidor.
+- Evite usar com outros agentes que substituam agressivamente métodos de `World`.
+
+## 🦘 NoJumpDelay
+Remove o tempo de recarga de pulo no cliente, permitindo saltos em ticks consecutivos (mais responsivo para parkour/PvP). Pode ser considerado vantagem injusta por servidores.
+
+Como usar:
+```bash
+# Carregar o agente (Windows)
+java -javaagent:"C:\caminho\para\NoJumpDelay.jar" -jar SeuLauncher.jar
+```
+
+Detalhes:
+- Implementado via hook ASM no cliente para zerar/ignorar o cooldown de pulo.
+- Não modifica o servidor; se o servidor aplicar verificações server‑side, o efeito pode ser limitado.
+- Use por sua conta e risco (passível de flag em alguns anticheats).
+
 ---
 
 ## 🧩 Compatibilidade e limitações
