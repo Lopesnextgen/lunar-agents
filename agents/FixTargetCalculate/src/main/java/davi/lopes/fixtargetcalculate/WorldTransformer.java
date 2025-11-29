@@ -71,19 +71,9 @@ public final class WorldTransformer implements ClassFileTransformer {
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
             MethodVisitor base = super.visitMethod(access, name, desc, signature, exceptions);
 
-            if ("(Ljava/lang/Class;Lnet/minecraft/util/AxisAlignedBB;)Ljava/util/List;".equals(desc)) {
+            if ("(Ljava/lang/Class;Lnet/minecraft/util/AxisAlignedBB;)Ljava/util/List;".equals(desc)
+                    || "(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/AxisAlignedBB;Lcom/google/common/base/Predicate;)Ljava/util/List;".equals(desc)) {
                 return new MethodVisitor(api, base) {
-                    private boolean emitted;
-                    @Override public void visitCode() {
-                        if (emitted) return; emitted = true; super.visitCode();
-                        super.visitVarInsn(Opcodes.ALOAD, 0);
-                        super.visitVarInsn(Opcodes.ALOAD, 1);
-                        super.visitVarInsn(Opcodes.ALOAD, 2);
-                        super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getEntitiesAABBHook",
-                                "(Ljava/lang/Object;Ljava/lang/Class;Ljava/lang/Object;)Ljava/util/List;", false);
-                        super.visitInsn(Opcodes.ARETURN);
-                        getAabbPatched = true; modified = true;
-                    }
                     @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
                         if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
                                 && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
@@ -94,35 +84,6 @@ public final class WorldTransformer implements ClassFileTransformer {
                             super.visitFieldInsn(opcode, ownerF, nameF, descF);
                         }
                     }
-                    @Override public void visitMaxs(int maxStack, int maxLocals) { super.visitMaxs(0, 0); }
-                };
-            }
-
-            if ("(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/AxisAlignedBB;Lcom/google/common/base/Predicate;)Ljava/util/List;".equals(desc)) {
-                return new MethodVisitor(api, base) {
-                    private boolean emitted;
-                    @Override public void visitCode() {
-                        if (emitted) return; emitted = true; super.visitCode();
-                        super.visitVarInsn(Opcodes.ALOAD, 0);
-                        super.visitVarInsn(Opcodes.ALOAD, 1);
-                        super.visitVarInsn(Opcodes.ALOAD, 2);
-                        super.visitVarInsn(Opcodes.ALOAD, 3);
-                        super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getEntitiesInAABBExcludingHook",
-                                "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;", false);
-                        super.visitInsn(Opcodes.ARETURN);
-                        getAabbExclPatched = true; modified = true;
-                    }
-                    @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
-                        if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
-                                && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
-                            super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
-                                    "(Ljava/lang/Object;)Ljava/util/List;", false);
-                            loadedFieldRewrites++; modified = true;
-                        } else {
-                            super.visitFieldInsn(opcode, ownerF, nameF, descF);
-                        }
-                    }
-                    @Override public void visitMaxs(int maxStack, int maxLocals) { super.visitMaxs(0, 0); }
                 };
             }
 
@@ -175,18 +136,7 @@ public final class WorldTransformer implements ClassFileTransformer {
                 };
             }
 
-            return new MethodVisitor(api, base) {
-                @Override public void visitFieldInsn(int opcode, String ownerF, String nameF, String descF) {
-                    if (opcode == Opcodes.GETFIELD && owner.equals(ownerF) && "Ljava/util/List;".equals(descF)
-                            && ("loadedEntityList".equals(nameF) || "field_72996_f".equals(nameF))) {
-                        super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, "getLoadedEntityListHook",
-                                "(Ljava/lang/Object;)Ljava/util/List;", false);
-                        loadedFieldRewrites++; modified = true;
-                    } else {
-                        super.visitFieldInsn(opcode, ownerF, nameF, descF);
-                    }
-                }
-            };
+            return base;
         }
 
         private void rewriteLoadedListRead(MethodVisitor mv, int opcode, String ownerF, String nameF, String descF) {

@@ -11,18 +11,9 @@ public final class Hooks {
 
     private Hooks() {}
 
-
     public static volatile boolean DEBUG = false;
     private static boolean printedHookActive = false;
     private static long lastLogMs = 0L;
-
-
-
-
-
-
-
-
 
     private static Class<?> findClass(String... names) {
         for (String n : names) {
@@ -108,31 +99,29 @@ public final class Hooks {
                 @SuppressWarnings("unchecked")
                 List<?> cached = (List<?>) listF.get(world);
                 long last = lastF.getLong(world);
-                long now = System.currentTimeMillis();
-                if (cached != null && (now - last) < CACHE_INTERVAL_MS) {
+                if (cached != null && last != 0L) {
                     return cached;
                 }
                 List<?> src = readLoadedEntityList(world);
                 if (src == null) return cached != null ? cached : Collections.emptyList();
                 List<?> snapshot = new ArrayList<>(src);
                 listF.set(world, snapshot);
-                lastF.setLong(world, now);
-                debugLog("[World] cache refresh size=" + snapshot.size());
+                lastF.setLong(world, 1L);
+                debugLog("[World] snapshot refresh size=" + snapshot.size());
                 return snapshot;
             }
         } catch (Throwable ignored) {}
 
         synchronized (FALLBACK) {
             WorldCache wc = FALLBACK.computeIfAbsent(world, k -> new WorldCache());
-            long now = System.currentTimeMillis();
-            if (wc.cached != null && (now - wc.last) < CACHE_INTERVAL_MS) {
+            if (wc.cached != null && wc.last == 1L) {
                 return wc.cached;
             }
             List<?> src = readLoadedEntityList(world);
             if (src == null) return wc.cached != null ? wc.cached : Collections.emptyList();
             wc.cached = new ArrayList<>(src);
-            wc.last = now;
-            debugLog("[World:fallback] cache refresh size=" + wc.cached.size());
+            wc.last = 1L;
+            debugLog("[World:fallback] snapshot refresh size=" + wc.cached.size());
             return wc.cached;
         }
     }
