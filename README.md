@@ -1,189 +1,207 @@
-# Lunar Client Agents
-Conjunto de agentes Java (Java Agents) para modificar o comportamento do Lunar Client/Minecraft em tempo de execução. Estes agentes foram pensados para uso com o launcher lunar-client-qt (https://github.com/Nilsen84/lunar-client-qt), permitindo habilitar/desabilitar recursos, ajustar comportamentos e personalizar textos sem alterar os binários originais.
+# 🌙 Lunar Agents — Mods por Java Agent para o Lunar Client
 
-ATENÇÃO
-- O uso destes agentes pode violar os Termos de Uso de servidores e/ou do próprio cliente. Use por sua conta e risco.
-- Alguns agentes podem constituir vantagem injusta (unfair advantage), como HitDelayFix e StaffEnable. Não utilize em servidores onde isso não é permitido.
-- Projeto focado principalmente na versão 1.8.9 do Minecraft (nomes mapeados/obfuscados dessa linha), podendo não funcionar em outras versões.
+Conjunto de agentes Java que modificam o Lunar Client/Minecraft em tempo de execução — sem alterar os binários originais. Ideal para personalizar HUDs, corrigir comportamentos e habilitar recursos via hooks ASM.
 
-Sumário
-- Visão geral e requisitos
-- Estrutura do projeto
-- Como compilar
-- Como usar os agentes (Windows e multiplataforma)
-- Documentação de cada agente e opções
-- Compatibilidade e limitações
-- Solução de problemas (Troubleshooting)
-- Contribuindo
-- Licença
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-3DA639.svg" alt="License: GPLv3"></a>
+  <img src="https://img.shields.io/badge/java-16%2B-007396.svg" alt="Java 16+">
+  <img src="https://img.shields.io/badge/minecraft-1.8.9-blue.svg" alt="Minecraft 1.8.9">
+  <img src="https://img.shields.io/badge/build-Gradle-success.svg" alt="Gradle Build">
+</p>
 
-Visão geral e requisitos
-- Java: JDK 16 ou superior. O projeto está configurado com source/targetCompatibility = 16.
-- Build: Gradle Wrapper incluso (não é necessário instalar Gradle).
-- Sistemas: Windows, Linux e macOS (exemplos abaixo priorizam Windows por conveniência).
-- Launcher recomendado: lunar-client-qt.
+> Aviso: O uso de agentes pode violar regras de servidores e/ou do próprio cliente. Use por sua conta e risco. Muitos agentes aqui oferecem vantagem em PVP (ex.: HitDelayFix, StaffEnable).
 
-Estrutura do projeto
-- Raiz
-  - commons: utilitários compartilhados (ASM helpers, Utils, etc.).
-  - agents: pasta pai de todos os subprojetos de agentes.
-    - CrackedAccount
-    - CustomAutoGG
-    - CustomLevelHead
-    - DamageIndicator
-    - FixTargetCalculate
-    - HitDelayFix
-    - LevelHeadNicks
-    - LunarEnable (inclui BukkitTransformer e MetadataTransformer)
-    - LunarPacksFix
-    - NoJumpDelay
-    - NoPinnedServers
-    - RemovePlus
-    - StaffEnable
-    - TeamsAutoGG
+---
 
-Como compilar
-1) Clonar este repositório
-2) No Windows, abrir um terminal na raiz do projeto e executar:
-   - gradlew.bat build
-3) Em Linux/macOS:
-   - ./gradlew build
-4) Os jars “prontos para uso” (com dependências sombreadas pelo Shadow) serão gerados em:
-   - agents/<NomeDoAgente>/build/<NomeDoAgente>.jar
+## ✨ Principais recursos
+- 🔧 Injeção por `-javaagent` através de ASM (Bytecode) — nada de reempacotar o cliente.
+- 🧩 Vários agentes focados em 1.8.9 (Lunar), incluindo correções e melhorias de HUD.
+- 🛡️ Damage Indicator completo ao estilo J3, com:
+  - Vida real via scoreboard (`getRealHealth`)
+  - Armadura com durabilidade colorida e contagem no inventário
+  - Editor in‑game para posicionamento, com persistência e teclas de atalho
+- 🖥️ Compatível com Windows, Linux e macOS (exemplos priorizam Windows).
 
-Dica: Você pode também construir apenas um agente específico:
-- Windows: gradlew.bat :agents:CustomAutoGG:build
-- Linux/macOS: ./gradlew :agents:CustomAutoGG:build
+---
 
-Como usar os agentes
-Os agentes Java são carregados via parâmetro -javaagent na linha de comando de inicialização da JVM.
+## 🖼️ Previews
 
-- Forma geral
-  java -javaagent:"C:\caminho\para\Agente.jar"=opcao -jar SeuLauncher.jar
+- Damage Indicator em modo edição (exemplo ilustrativo):
 
-- Observações
-  - A string após = é repassada como argumento único para o método premain(String, Instrumentation) do agente.
-  - Se a opção contiver espaços, envolva-a entre aspas. Em Windows, prefira aspas duplas externas e escape de aspas internas quando necessário.
-  - Ao usar lunar-client-qt, consulte a documentação do projeto para saber onde injetar parâmetros adicionais de JVM. Em geral, basta acrescentar -javaagent para cada agente desejado.
+<p align="center">
+  <img alt="Damage Indicator — Modo Edição" src="https://img.shields.io/badge/Damage%20Indicator-Edit%20Mode-00A2FF.svg" />
+</p>
 
-Exemplos (Windows)
-- CustomAutoGG com mensagem personalizada:
-  java -javaagent:"C:\agentes\CustomAutoGG.jar"="gg wp" -jar lunar-client-qt.jar
+> Dica: Durante o modo edição, é exibido um placeholder mesmo sem alvo, para facilitar o posicionamento.
 
-- CrackedAccount com nome de usuário:
-  java -javaagent:"C:\agentes\CrackedAccount.jar"=MeuNick -jar lunar-client-qt.jar
+---
 
-- LevelHeadNicks fixando nível 12:
-  java -javaagent:"C:\agentes\LevelHeadNicks.jar"=12 -jar lunar-client-qt.jar
+## 📦 Estrutura
+```
+root
+├─ agents/                 # Subprojetos (um por agente)
+│  ├─ DamageIndicator/
+│  ├─ FixTargetCalculate/
+│  ├─ HitDelayFix/
+│  ├─ LunarEnable/
+│  ├─ LunarPacksFix/
+│  ├─ NoJumpDelay/
+│  └─ ...
+├─ commons/                # Utilitários compartilhados (ASM, helpers, etc.)
+├─ settings.gradle         # Configuração multi-project
+├─ build.gradle            # Build raiz
+└─ resources/              # Mapeamentos SRG/obf
+```
 
-Documentação dos agentes
-Abaixo um resumo do que cada agente faz e como configurá-lo (quando aplicável):
+---
 
-- CrackedAccount
-  - Permite jogar singleplayer e em servidores “cracked” usando o Lunar Client.
-  - Opção: nome de usuário a ser utilizado (String). Ex.: =MeuNick
+## ⚙️ Requisitos
+- Java 16+ (JDK)
+- Gradle Wrapper (já incluso — não precisa instalar Gradle)
+- Minecraft/Lunar 1.8.9 (mapeamentos focados nesta versão)
 
-- CustomAutoGG
-  - Substitui o texto padrão “/achat gg” por uma mensagem personalizada.
-  - Opção: mensagem (String). Ex.: ="gg wp" (use aspas se houver espaços).
+---
 
-- CustomLevelHead
-  - Substitui a legenda/phrasing “Level: ” por um texto customizado (ex.: “Nível: ”).
-  - Opção: frase (String). Ex.: ="Nível: "
+## 🧱 Como compilar
+- Windows:
+  ```powershell
+  gradlew.bat build
+  ```
+- Linux/macOS:
+  ```bash
+  ./gradlew build
+  ```
+Saída: `agents/<Agente>/build/<Agente>.jar`
 
-- DamageIndicator
-  - Exibe no HUD informações do alvo sob a mira (nome e vida), acima da mira.
-  - Sem opções.
+Compilando um agente específico:
+```bash
+# Windows
+gradlew.bat :agents:DamageIndicator:build
+# Linux/macOS
+./gradlew :agents:DamageIndicator:build
+```
 
-- FixTargetCalculate
-  - Ajusta o cálculo de mira/seleção de alvo (hook em EntityRenderer#getMouseOver) para melhorar a coerência do objeto “objectMouseOver”.
-  - Opção: debug (habilita logs de verificação). Ex.: =debug
-  - Como verificar se está funcionando:
-    - Inicie o cliente com: -javaagent:"C:\\agentes\\FixTargetCalculate.jar"=debug
-    - No console/terminal você deverá ver (entre outras) linhas como:
-      - [FixTargetCalculate] Agent loaded (debug=ON)
-      - [FixTargetCalculate] Patched EntityRenderer#getMouseOver (name: getMouseOver | func_78473_a)
-      - [FixTargetCalculate] Hook active
-      - Durante o jogo, ao mirar em jogadores, logs eventuais (limitados a 1/s) como:
-        - [FixTargetCalculate] Lock -> <nome>(id=123)
-        - [FixTargetCalculate] Keep lock -> <nome>(id=123)
-        - [FixTargetCalculate] Override objectMouseOver -> <nome>(id=123)
-        - [FixTargetCalculate] No target -> release lock
-    - Onde ver os logs: execute o launcher pelo terminal (cmd/PowerShell) para que o output da JVM fique visível.
+---
 
-- HitDelayFix
-  - Remove o cooldown aleatório de ataque em 1.8, fazendo a espada “não travar” aleatoriamente.
-  - Vantagem injusta em PVP. Use por sua conta e risco.
-  - Sem opções.
+## 🚀 Como usar (carregar agentes)
+Carregue os jars usando o parâmetro `-javaagent` da JVM:
 
-- LevelHeadNicks
-  - Força o valor de nível usado em um trecho que normalmente utilizaria aleatoriedade (ThreadLocalRandom.nextInt(25)).
-  - Opção: inteiro. Recomenda-se um valor entre 0 e 24. Ex.: =12
+```bash
+java -javaagent:"C:\caminho\para\Agente.jar"=opcao -jar SeuLauncher.jar
+```
 
-- LunarEnable
-  - Reabilita mods desativados pelo cliente (ex.: FreeLook, Auto Text Hotkey). Também inclui ajustes em metadados e integração Bukkit.
-  - Sem opções.
+Observações:
+- Tudo após `=` é repassado como argumento ao `premain` do agente.
+- Se houver espaços, use aspas. Em Windows, prefira aspas duplas externas.
+- Para o launcher `lunar-client-qt`, consulte a doc do projeto para injetar parâmetros adicionais da JVM.
 
-- LunarPacksFix
-  - Restaura o uso de overlays de texturas do Lunar.
-  - Sem opções.
+---
 
-- NoJumpDelay
-  - Remove o atraso entre pulos (cooldown de pulo).
-  - Sem opções.
+## 📚 Agentes disponíveis (resumo)
 
-- NoPinnedServers
-  - Remove servidores “fixados/pinned” da lista.
-  - Sem opções.
+- DamageIndicator — HUD de alvo ao estilo J3 (ver seção abaixo).
+- FixTargetCalculate — melhora o cálculo de `objectMouseOver` (mira/alvo).
+- HitDelayFix — remove cooldown aleatório de ataque (vantagem injusta).
+- LunarEnable — reabilita mods desativados (FreeLook etc.) e integrações.
+- LunarPacksFix — restaura overlays de texturas do Lunar.
+- NoJumpDelay — remove cooldown de pulo.
 
-- RemovePlus
-  - Remove o ícone/literal “+” do Lunar+.
-  - Sem opções.
+---
 
-- StaffEnable
-  - Habilita mods exclusivos para staff (atualmente, xray). Vídeo demonstrativo do xray embutido no Lunar: https://www.youtube.com/watch?v=xWZsFqH9TwQ
-  - Vantagem injusta. Use por sua conta e risco.
-  - Sem opções.
+## 🩸 Damage Indicator (J3‑style)
+HUD que mostra informações do alvo sob a mira. Implementado via hook em `GuiIngame#renderGameOverlay`.
 
-- TeamsAutoGG
-  - Faz o Auto GG funcionar em modos de times.
-  - Sem opções.
+Funcionalidades:
+- Nome do alvo
+- Vida real (scoreboard slot 2) com fallback para `getHealth()`
+- 0–4 peças de armadura do alvo, com:
+  - Ícone da peça
+  - Durabilidade restante colorida (verde/amarelo/vermelho)
+  - Contagem no inventário quando o alvo é o próprio jogador local
 
-- World188Compat
-  - Emula o comportamento da classe World da 1.8.8 no Minecraft 1.8.9 (caching de entidades, getEntitiesWithinAABB sem reconstruções e controle via updateEntities).
-  - Opção: debug (habilita logs detalhados). Ex.: =debug
-  - Como verificar:
-    - Inicie o cliente com: -javaagent:"C:\\agentes\\World188Compat.jar"=debug
-    - Logs esperados no início:
-      - [World188Compat] Agent loaded (debug=ON)
-      - [World188Compat] Patched net.minecraft.world.World fields=... initCtors=... getLoadedEntityList=... getEntitiesWithinAABB=... updateEntities=...
-    - Logs em runtime (limitados a ~1/s):
-      - [World188Compat] [getLoadedEntityListHook] refreshed cache (size=NN)
-      - [World188Compat] [getEntitiesAABBHook] filtered result size=NN
-      - [World188Compat] [onWorldUpdate] invalidated cache (will refresh on next query)
+### 🔁 `getRealHealth`
+- Lê o placar do servidor (`Scoreboard.getObjectiveInDisplaySlot(2)`) e retorna o valor quando `> 1`.
+- Caso contrário, retorna `entity.getHealth()`.
 
-Compatibilidade e limitações
-- Foco em Minecraft 1.8.9. Pode não funcionar (ou funcionar parcialmente) em outras versões.
-- Mudanças no cliente/launcher podem quebrar os hooks a qualquer momento. Se um agente “parar de funcionar”, atualizações de nomes/assinaturas podem ser necessárias.
+### 🧭 Posição do indicador
+Três formas de configurar (precedência de menor para maior): arquivo → variáveis de ambiente → propriedades JVM.
 
-Solução de problemas (Troubleshooting)
-- A JVM não inicia ou encerra ao carregar um agente
-  - Verifique se o caminho do jar está correto e se você tem permissão de leitura.
-  - Confirme que está usando Java 16+.
-  - Tente executar sem o agente para isolar o problema.
+1) Arquivo: `~/.lunar-agents/damageindicator.properties`
+```
+position=center|fixed|centralizado|fixo
+x=120
+y=80
+offsetX=0
+offsetY=-25
+```
 
-- O agente “não faz efeito”
-  - Certifique-se de estar na versão suportada (ex.: 1.8.9).
-  - Confira se o agente está realmente sendo carregado (-javaagent precisa apontar para o jar correto).
-  - Em agentes com opções, valide a sintaxe: -javaagent:"...jar"=valor (aspas quando houver espaços).
+2) Variáveis de ambiente:
+```
+DAMAGEINDICATOR_POSITION=center|fixed
+DAMAGEINDICATOR_X=120
+DAMAGEINDICATOR_Y=80
+DAMAGEINDICATOR_OFFSET_X=0
+DAMAGEINDICATOR_OFFSET_Y=-25
+```
 
-- Conflitos entre agentes
-  - Evite carregar múltiplos agentes que transformam a mesma classe/método de formas incompatíveis.
+3) Propriedades JVM (recomendado):
+```
+-Ddamageindicator.position=center|fixed
+-Ddamageindicator.x=120
+-Ddamageindicator.y=80
+-Ddamageindicator.offsetX=0
+-Ddamageindicator.offsetY=-25
+```
 
-Contribuindo
-- Pull Requests são bem-vindos. Mantenha as alterações tanto quanto possível isoladas por agente.
-- Para novos agentes, crie um subprojeto em agents/<NovoAgente> e adicione um gradle.properties com agentClass=<pacote>.Agent.
-- Siga o padrão existente: método static premain(String, Instrumentation) e uso de ShadowJar para empacotar dependências.
+> Observação: as chaves `centralizado/fixo` são equivalentes a `center/fixed` internamente.
 
-Licença
-- GPLv3 (ver arquivo LICENSE). Ao contribuir, você concorda em licenciar suas contribuições sob os termos da GPLv3.
+### ✏️ Modo edição (in‑game)
+- F7 — entra/sai do modo edição.
+- M — alterna entre `center` (offset) e `fixed` (x/y absolutos).
+- Setas — movem o indicador.
+- Shift — acelera (±5px).
+- Ctrl — acelera mais (±20px).
+- Enter — salva no arquivo de configuração e sai.
+- Esc — cancela (reverte valores) e sai.
+
+Durante o modo edição:
+- Um contorno e uma caixa translúcida destacam a área do indicador.
+- Dicas de teclas aparecem abaixo do indicador.
+- E é exibido um crédito no canto inferior esquerdo:
+  `github.com/Lopesnextgen | github.com/Adoecido`
+
+---
+
+## 🧩 Compatibilidade e limitações
+- Foco em 1.8.9 — pode falhar em outras versões.
+- Mudanças no cliente/launcher podem quebrar os hooks a qualquer momento.
+- Evite carregar múltiplos agentes que transformam o mesmo método de forma incompatível.
+
+---
+
+## 🛠️ Solução de problemas
+- JVM não inicia com `-javaagent`:
+  - Verifique caminho do jar e permissões.
+  - Use Java 16+.
+- "Não faz efeito":
+  - Confirme a versão (1.8.9).
+  - Confirme que o agente está realmente sendo carregado.
+  - Revise a sintaxe: `-javaagent:"...jar"=valor`.
+
+---
+
+## 🤝 Contribuindo
+- PRs são bem-vindos. Mantenha cada agente isolado ao máximo.
+- Para um novo agente: crie `agents/<Nome>` + `gradle.properties` com `agentClass=<pacote>.Agent`.
+- Siga o padrão `premain(String, Instrumentation)` e empacotamento com ShadowJar.
+
+---
+
+## 🧾 Licença
+GPLv3 — veja [`LICENSE`](LICENSE).
+
+---
+
+## 🙌 Créditos
+- github.com/Lopesnextgen
+- github.com/Adoecido
