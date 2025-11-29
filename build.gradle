@@ -1,5 +1,5 @@
 subprojects {
-    group 'me.onils'
+    group 'davi.lopes'
 
     repositories {
         mavenCentral()
